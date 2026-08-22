@@ -13,9 +13,59 @@ import ClipboardButton from "./ClipboardButton";
 import { QRCodeSVG } from "qrcode.react";
 import "./SendApp.css";
 
+// Словарь переводов
+const translations = {
+  ru: {
+    howItWorks: "Как это работает",
+    selectFile: "Выберите файл для передачи",
+    fileNote: "Обратите внимание: файл не будет загружен на сервер. Когда вы нажмете кнопку отправки, будет создана уникальная ссылка, позволяющая получателю скачать файл напрямую из вашего браузера.",
+    choosePassword: "Придумайте пароль",
+    passwordNote: "Пароль будет использован для шифрования вашего файла. Вам нужно будет передать его получателю.",
+    generateLink: "Создать ссылку",
+    generateNote: "Нажатие кнопки \"Создать\" зашифрует ваш файл в вашем браузере с использованием указанного пароля. Затем будет создана уникальная ссылка, которой вы можете поделиться для передачи зашифрованного файла напрямую из вашего браузера.",
+    generate: "Создать",
+    share: "Поделиться",
+    keepWindowOpen: "Вам нужно оставить это окно открытым до тех пор, пока файл не будет полностью скопирован в браузер получателя.",
+    sendLink: "Отправьте следующую ссылку получателю вместе с вашим паролем:",
+    qrCodeLabel: "QR-код для скачивания",
+    hideSettings: "Скрыть настройки",
+    settings: "⚙️ Настройки",
+    sizePixels: "Размер (пиксели):",
+    errorCorrection: "Коррекция ошибок:",
+    low: "Низкая (7%)",
+    medium: "Средняя (15%)",
+    quartile: "Квартильная (25%)",
+    high: "Высокая (30%)",
+    langSwitch: "English"
+  },
+  en: {
+    howItWorks: "How it works",
+    selectFile: "Select a file to transfer",
+    fileNote: "Note the file will not be uploaded to a server. When you click submit, a unique link will be generated allowing the receiver to download the file directly from your browser.",
+    choosePassword: "Choose a password",
+    passwordNote: "The password will be used to encrypt your file. You will need to share it with the recipient.",
+    generateLink: "Generate link",
+    generateNote: "Clicking \"Generate\" will encrypt your file in your browser using the provided password. It'll then generate a unique link that you can share for users to transfer the encrypted file directly from your browser.",
+    generate: "Generate",
+    share: "Share",
+    keepWindowOpen: "You'll need to leave this window open until the file is completely copied to their browser.",
+    sendLink: "Send the following link to the recipient, along with your password:",
+    qrCodeLabel: "QR Code for download link",
+    hideSettings: "Hide settings",
+    settings: "⚙️ Settings",
+    sizePixels: "Size (pixels):",
+    errorCorrection: "Error correction:",
+    low: "Low (7%)",
+    medium: "Medium (15%)",
+    quartile: "Quartile (25%)",
+    high: "High (30%)",
+    langSwitch: "Русский"
+  }
+};
+
 function getReceiverLink(id) {
-  const currentURL = new URL(window.location.href);
-  return `${currentURL.origin}/receive/${id}`;
+  // Генерируем ссылку на оригинальном домене sendfiles.dev
+  return `https://sendfiles.dev/receive/${id}`;
 }
 
 function SendApp() {
@@ -26,9 +76,16 @@ function SendApp() {
     Math.random() < 0.5 ? "hunter2" : "correct-horse-battery-staple",
   );
   const [formErrors, setFormErrors] = useState();
-  const [qrSize, setQrSize] = useState(128);
-  const [qrLevel, setQrLevel] = useState("M");
+  const [qrSize, setQrSize] = useState(512); // Начальный размер 512px
+  const [qrLevel, setQrLevel] = useState("H"); // Высокая коррекция ошибок по умолчанию
   const [showQRSettings, setShowQRSettings] = useState(false);
+  const [lang, setLang] = useState('ru'); // Русский язык по умолчанию
+  
+  const t = translations[lang];
+
+  const handleLangSwitch = () => {
+    setLang(prev => prev === 'ru' ? 'en' : 'ru');
+  };
 
   // save files when selected
   const onFileSelected = (e) => {
@@ -166,32 +223,33 @@ function SendApp() {
 
   return (
     <div>
+      <div className="lang-switch-container">
+        <button onClick={handleLangSwitch} className="lang-switch-btn">
+          {t.langSwitch}
+        </button>
+      </div>
       <form>
         <div className="form-field">
-          <label>How it works</label>
+          <label>{t.howItWorks}</label>
           <div>
-            <a href="/">sendfiles.dev</a> allows you to transfer files directly
-            from one browser to another without going through an intermediary
-            server by utilizing{" "}
+            <a href="https://sendfiles.dev/" target="_blank" rel="noopener noreferrer">sendfiles.dev</a> позволяет вам передавать файлы напрямую
+            из одного браузера в другой без прохождения через промежуточный
+            сервер, используя технологию{" "}
             <a
               href="https://webrtc.org/"
               target="_blank"
               rel="noopener noreferrer"
             >
               WebRTC
-            </a>
-            . Files are encrypted in your browser using the password you
-            provide. The files are decrypted in the receiver's browser using the
-            same password. Click <a href="/about">here</a> to read about the
-            security properties.
+            </a>. Файлы шифруются в вашем браузере с использованием пароля, который вы
+            указываете. Файлы расшифровываются в браузере получателя с помощью того же
+            пароля. Нажмите <a href="/about">сюда</a>, чтобы узнать о свойствах безопасности.
           </div>
         </div>
         <div className="form-field">
-          <label htmlFor="file_input">Select a file to transfer</label>
+          <label htmlFor="file_input">{t.selectFile}</label>
           <div className="form-description">
-            Note the file will not be uploaded to a server. When you click
-            submit, a unique link will be generated allowing the receiver to
-            download the file directly from your browser.
+            {t.fileNote}
           </div>
           <input
             id="file_input"
@@ -204,10 +262,9 @@ function SendApp() {
           )}
         </div>
         <div className="form-field">
-          <label htmlFor="password">Choose a password</label>
+          <label htmlFor="password">{t.choosePassword}</label>
           <div className="form-description">
-            The password will be used to encrypt your file. You will need to
-            share it with the recipient.
+            {t.passwordNote}
           </div>
           <input
             id="password"
@@ -223,12 +280,9 @@ function SendApp() {
         </div>
         {!receiveLink ? (
           <div>
-            <label htmlFor="submit">Generate link</label>
+            <label htmlFor="submit">{t.generateLink}</label>
             <div className="form-description">
-              Clicking <code>Generate</code> will encrypt your file in your
-              browser using the provided password. It'll then generate a unique
-              link that you can share for users to transfer the encrypted file
-              directly from your browser.
+              {t.generateNote}
             </div>
             <button
               id="submit"
@@ -236,19 +290,17 @@ function SendApp() {
               className="filled submit-button"
               onClick={initiateTransfer}
             >
-              Generate
+              {t.generate}
             </button>
           </div>
         ) : (
           <div>
-            <label>Share</label>
+            <label>{t.share}</label>
             <div className="instruction-browser-open">
-              You'll need to leave this window open until the file is completely
-              copied to their browser.
+              {t.keepWindowOpen}
             </div>
             <div className="form-description">
-              Send the following link to the recipient, along with your
-              password:
+              {t.sendLink}
             </div>
             <div className="receive-link-container">
               <div className="receive-link">
@@ -264,41 +316,41 @@ function SendApp() {
             {/* QR Code Section */}
             <div className="qr-section">
               <div className="qr-header">
-                <label>QR Code for download link</label>
+                <label>{t.qrCodeLabel}</label>
                 <button 
                   type="button" 
                   className="qr-settings-toggle"
                   onClick={() => setShowQRSettings(!showQRSettings)}
                 >
-                  {showQRSettings ? "Hide settings" : "⚙️ Settings"}
+                  {showQRSettings ? t.hideSettings : t.settings}
                 </button>
               </div>
               
               {showQRSettings && (
                 <div className="qr-settings">
                   <div className="qr-setting-row">
-                    <label htmlFor="qr-size">Size (pixels):</label>
+                    <label htmlFor="qr-size">{t.sizePixels}</label>
                     <input
                       id="qr-size"
                       type="number"
                       min="64"
-                      max="512"
+                      max="2000"
                       step="32"
                       value={qrSize}
                       onChange={(e) => setQrSize(Number(e.target.value))}
                     />
                   </div>
                   <div className="qr-setting-row">
-                    <label htmlFor="qr-level">Error correction:</label>
+                    <label htmlFor="qr-level">{t.errorCorrection}:</label>
                     <select
                       id="qr-level"
                       value={qrLevel}
                       onChange={(e) => setQrLevel(e.target.value)}
                     >
-                      <option value="L">Low (7%)</option>
-                      <option value="M">Medium (15%)</option>
-                      <option value="Q">Quartile (25%)</option>
-                      <option value="H">High (30%)</option>
+                      <option value="L">{t.low}</option>
+                      <option value="M">{t.medium}</option>
+                      <option value="Q">{t.quartile}</option>
+                      <option value="H">{t.high}</option>
                     </select>
                   </div>
                 </div>

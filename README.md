@@ -1,7 +1,23 @@
 # sendfiles.dev
 
-[sendfiles.dev](https://sendfiles.dev) allows for encrypted, browser-to-browser file transfer using [WebRTC](https://webrtc.org).
+[sendfiles.dev](https://sendfiles.dev) позволяет передавать файлы с шифрованием напрямую между браузерами с использованием [WebRTC](https://webrtc.org).
 
+Этот форк добавляет возможность генерации QR-кодов для ссылок скачивания, поддержку русского языка и возможность развертывания на GitHub Pages.
+
+## Особенности этой версии
+
+- **QR-коды**: После создания ссылки для скачивания автоматически генерируется QR-код, который можно отсканировать для быстрого доступа к файлу
+- **Настройка QR-кода**: Можно изменять размер QR-кода (от 64 до 2000 пикселей) и уровень коррекции ошибок
+- **Русский язык**: Интерфейс доступен на русском и английском языках с возможностью переключения
+- **GitHub Pages**: Фронтенд можно развернуть на GitHub Pages для бесплатного хостинга
+
+## Быстрый старт с GitHub Pages
+
+1. Зайдите в настройки вашего репозитория на GitHub
+2. Перейдите в раздел **Pages** (в левой панели)
+3. В разделе **Source** выберите **GitHub Actions**
+4. Все изменения в ветке `master` автоматически запускают процесс сборки и деплоя
+5. Ваш сайт будет доступен по адресу: `https://<ваш-ник>.github.io/<имя-репозитория>`
 
 ## Architecture
 
@@ -23,17 +39,33 @@ Coordination:
 ## Project Structure
 ```
 backend/ - code for both Lambdas, written in Rust
-frontend/ - webapp, written in React
+frontend/ - webapp, written in React (with QR code support and i18n)
 scripts/ - misc helper scripts for build/deploy
 terraform/ - config for all the infrastructure
+.github/workflows/ - GitHub Actions workflows for CI/CD
 ```
 
 
 ## Deployment
 
+### Развертывание на GitHub Pages
+
+Автоматическое развертывание настроено через GitHub Actions. При каждом пуше в ветку `master`:
+1. Устанавливаются зависимости
+2. Собирается фронтенд
+3. Артефакты загружаются на GitHub Pages
+
+Для ручной публикации используйте команду:
+```shell
+cd frontend
+npm run deploy
+```
+
+### Оригинальное развертывание на AWS
+
 The Lambdas, API Gateways, DynamoDBs, IAM permissions and frontend S3 bucket/CloudFront distribution are deployed with Terraform:
 
-### Terraform
+#### Terraform
 
 ```shell
 docker run -it --rm \
@@ -46,7 +78,7 @@ docker run -it --rm \
     hashicorp/terraform:1.9
 ```
 
-### Backend
+#### Backend
 
 ```shell
 docker run -it --rm \
@@ -66,7 +98,7 @@ cargo build --target=aarch64-unknown-linux-gnu --release
 ./scripts/deploy-backend.sh
 ```
 
-### Frontend
+#### Frontend
 
 Frontend assets are deployed to an S3 bucket fronted by CloudFront:
 ```shell

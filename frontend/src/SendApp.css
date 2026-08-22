@@ -23,6 +23,28 @@
   margin: 20px 0;
 }
 
+/* Language Switch Button */
+.lang-switch-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+}
+
+.lang-switch-btn {
+  background: none;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.lang-switch-btn:hover {
+  background-color: #f6f8fa;
+  border-color: #d1d5da;
+}
+
 /* QR Code Section Styles */
 .qr-section {
   margin-top: 25px;
