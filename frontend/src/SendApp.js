@@ -10,6 +10,7 @@ import { genKey, encryptMessage, exportKeyAsBase64 } from "./Crypto";
 import { readFile } from "./File";
 import { Sender } from "./FileTransfer";
 import ClipboardButton from "./ClipboardButton";
+import { QRCodeSVG } from "qrcode.react";
 import "./SendApp.css";
 
 function getReceiverLink(id) {
@@ -25,6 +26,9 @@ function SendApp() {
     Math.random() < 0.5 ? "hunter2" : "correct-horse-battery-staple",
   );
   const [formErrors, setFormErrors] = useState();
+  const [qrSize, setQrSize] = useState(128);
+  const [qrLevel, setQrLevel] = useState("M");
+  const [showQRSettings, setShowQRSettings] = useState(false);
 
   // save files when selected
   const onFileSelected = (e) => {
@@ -254,6 +258,60 @@ function SendApp() {
               </div>
               <div className="copy-button">
                 <ClipboardButton content={receiveLink} />
+              </div>
+            </div>
+          
+            {/* QR Code Section */}
+            <div className="qr-section">
+              <div className="qr-header">
+                <label>QR Code for download link</label>
+                <button 
+                  type="button" 
+                  className="qr-settings-toggle"
+                  onClick={() => setShowQRSettings(!showQRSettings)}
+                >
+                  {showQRSettings ? "Hide settings" : "⚙️ Settings"}
+                </button>
+              </div>
+              
+              {showQRSettings && (
+                <div className="qr-settings">
+                  <div className="qr-setting-row">
+                    <label htmlFor="qr-size">Size (pixels):</label>
+                    <input
+                      id="qr-size"
+                      type="number"
+                      min="64"
+                      max="512"
+                      step="32"
+                      value={qrSize}
+                      onChange={(e) => setQrSize(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="qr-setting-row">
+                    <label htmlFor="qr-level">Error correction:</label>
+                    <select
+                      id="qr-level"
+                      value={qrLevel}
+                      onChange={(e) => setQrLevel(e.target.value)}
+                    >
+                      <option value="L">Low (7%)</option>
+                      <option value="M">Medium (15%)</option>
+                      <option value="Q">Quartile (25%)</option>
+                      <option value="H">High (30%)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+              
+              <div className="qr-code-wrapper">
+                <QRCodeSVG 
+                  value={receiveLink}
+                  size={qrSize}
+                  level={qrLevel}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                />
               </div>
             </div>
           </div>
