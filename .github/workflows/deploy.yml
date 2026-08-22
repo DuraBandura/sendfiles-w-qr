@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - master
+      - master  # Или 'master', если ваша главная ветка называется так
 
 permissions:
   contents: read
