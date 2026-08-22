@@ -1,15 +1,1 @@
-```
-# Dependencies
-node_modules/
-
-# Environment
-.env
-.env.local
-.env.*
-
-# Editors
-.vscode/
-
-# Logs
-*.log
-```
+Nothing should be ignored since the changes only include source files (.md, .css, .js) and no build artifacts, dependencies, or temporary files.
