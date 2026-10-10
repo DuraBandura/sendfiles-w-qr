@@ -71,7 +71,7 @@ function getReceiverLink(id) {
 function SendApp() {
   const [fileDetails, setFileDetails] = useState();
   const [password, setPassword] = useState("");
-  const [receiveLink, setReceiveLink] = useState();
+  const [receiveLinks, setReceiveLinks] = useState([]);
   const [passwordPlaceholder] = useState(
     Math.random() < 0.5 ? "hunter2" : "correct-horse-battery-staple",
   );
@@ -158,7 +158,7 @@ function SendApp() {
 
     // set up receiver link
     const receiverLink = getReceiverLink(transferDetails.id);
-    setReceiveLink(receiverLink);
+    setReceiveLinks((prev) => [...prev, { link: receiverLink, name: fileDetails.name }]);
 
     // open websocket to coordinate webrtc connection and transfer the file
     const socketUrl = new URL(config.COORD_API);
