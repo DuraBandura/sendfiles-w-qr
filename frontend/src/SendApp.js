@@ -64,23 +64,24 @@ const translations = {
 };
 
 function getReceiverLink(id) {
-  // Генерируем ссылку на оригинальном домене sendfiles.dev
+  // Ссылка ведёт на оригинальный сайт sendfiles.dev (получатель использует его)
   return `https://sendfiles.dev/receive/${id}`;
 }
 
 function SendApp() {
   const [fileDetails, setFileDetails] = useState();
   const [password, setPassword] = useState("");
+  // список созданных ссылок: [{ link, name }]
   const [receiveLinks, setReceiveLinks] = useState([]);
   const [passwordPlaceholder] = useState(
     Math.random() < 0.5 ? "hunter2" : "correct-horse-battery-staple",
   );
   const [formErrors, setFormErrors] = useState();
-  const [qrSize, setQrSize] = useState(512); // Начальный размер 512px
+  const [qrSize, setQrSize] = useState(256);
   const [qrLevel, setQrLevel] = useState("H"); // Высокая коррекция ошибок по умолчанию
   const [showQRSettings, setShowQRSettings] = useState(false);
   const [lang, setLang] = useState('ru'); // Русский язык по умолчанию
-  
+
   const t = translations[lang];
 
   const handleLangSwitch = () => {
@@ -156,9 +157,10 @@ function SendApp() {
       body: JSON.stringify(metadata),
     }).then((resp) => resp.json());
 
-    // set up receiver link
+    // set up receiver link (добавляем в список, чтобы можно было отправить несколько файлов)
     const receiverLink = getReceiverLink(transferDetails.id);
-    setReceiveLinks((prev) => [...prev, { link: receiverLink, name: fileDetails.name }]);
+    const fileName = fileDetails.name;
+    setReceiveLinks((prev) => [...prev, { link: receiverLink, name: fileName }]);
 
     // open websocket to coordinate webrtc connection and transfer the file
     const socketUrl = new URL(config.COORD_API);
@@ -278,23 +280,25 @@ function SendApp() {
             <div className="form-error">{formErrors.password}</div>
           )}
         </div>
-        {!receiveLink ? (
-          <div>
-            <label htmlFor="submit">{t.generateLink}</label>
-            <div className="form-description">
-              {t.generateNote}
-            </div>
-            <button
-              id="submit"
-              type="submit"
-              className="filled submit-button"
-              onClick={initiateTransfer}
-            >
-              {t.generate}
-            </button>
+
+        {/* Кнопка создания ссылки теперь видна всегда */}
+        <div>
+          <label htmlFor="submit">{t.generateLink}</label>
+          <div className="form-description">
+            {t.generateNote}
           </div>
-        ) : (
-          <div>
+          <button
+            id="submit"
+            type="submit"
+            className="filled submit-button"
+            onClick={initiateTransfer}
+          >
+            {t.generate}
+          </button>
+        </div>
+
+        {receiveLinks.length > 0 && (
+          <div className="form-field">
             <label>{t.share}</label>
             <div className="instruction-browser-open">
               {t.keepWindowOpen}
@@ -302,70 +306,75 @@ function SendApp() {
             <div className="form-description">
               {t.sendLink}
             </div>
-            <div className="receive-link-container">
-              <div className="receive-link">
-                <a href={receiveLink} target="_blank" rel="noopener noreferrer">
-                  {receiveLink}
-                </a>
-              </div>
-              <div className="copy-button">
-                <ClipboardButton content={receiveLink} />
-              </div>
+
+            <div className="qr-header">
+              <label>{t.qrCodeLabel}</label>
+              <button
+                type="button"
+                className="qr-settings-toggle"
+                onClick={() => setShowQRSettings(!showQRSettings)}
+              >
+                {showQRSettings ? t.hideSettings : t.settings}
+              </button>
             </div>
-          
-            {/* QR Code Section */}
-            <div className="qr-section">
-              <div className="qr-header">
-                <label>{t.qrCodeLabel}</label>
-                <button 
-                  type="button" 
-                  className="qr-settings-toggle"
-                  onClick={() => setShowQRSettings(!showQRSettings)}
-                >
-                  {showQRSettings ? t.hideSettings : t.settings}
-                </button>
+
+            {showQRSettings && (
+              <div className="qr-settings">
+                <div className="qr-setting-row">
+                  <label htmlFor="qr-size">{t.sizePixels}</label>
+                  <input
+                    id="qr-size"
+                    type="number"
+                    min="64"
+                    max="2000"
+                    step="32"
+                    value={qrSize}
+                    onChange={(e) => setQrSize(Number(e.target.value))}
+                  />
+                </div>
+                <div className="qr-setting-row">
+                  <label htmlFor="qr-level">{t.errorCorrection}</label>
+                  <select
+                    id="qr-level"
+                    value={qrLevel}
+                    onChange={(e) => setQrLevel(e.target.value)}
+                  >
+                    <option value="L">{t.low}</option>
+                    <option value="M">{t.medium}</option>
+                    <option value="Q">{t.quartile}</option>
+                    <option value="H">{t.high}</option>
+                  </select>
+                </div>
               </div>
-              
-              {showQRSettings && (
-                <div className="qr-settings">
-                  <div className="qr-setting-row">
-                    <label htmlFor="qr-size">{t.sizePixels}</label>
-                    <input
-                      id="qr-size"
-                      type="number"
-                      min="64"
-                      max="2000"
-                      step="32"
-                      value={qrSize}
-                      onChange={(e) => setQrSize(Number(e.target.value))}
-                    />
+            )}
+
+            {receiveLinks.map(({ link, name }) => (
+              <div key={link} className="qr-section">
+                <div className="form-description">
+                  <span className="bold">{name}</span>
+                </div>
+                <div className="receive-link-container">
+                  <div className="receive-link">
+                    <a href={link} target="_blank" rel="noopener noreferrer">
+                      {link}
+                    </a>
                   </div>
-                  <div className="qr-setting-row">
-                    <label htmlFor="qr-level">{t.errorCorrection}:</label>
-                    <select
-                      id="qr-level"
-                      value={qrLevel}
-                      onChange={(e) => setQrLevel(e.target.value)}
-                    >
-                      <option value="L">{t.low}</option>
-                      <option value="M">{t.medium}</option>
-                      <option value="Q">{t.quartile}</option>
-                      <option value="H">{t.high}</option>
-                    </select>
+                  <div className="copy-button">
+                    <ClipboardButton content={link} />
                   </div>
                 </div>
-              )}
-              
-              <div className="qr-code-wrapper">
-                <QRCodeSVG 
-                  value={receiveLink}
-                  size={qrSize}
-                  level={qrLevel}
-                  bgColor="#ffffff"
-                  fgColor="#000000"
-                />
+                <div className="qr-code-wrapper">
+                  <QRCodeSVG
+                    value={link}
+                    size={qrSize}
+                    level={qrLevel}
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                    style={{ maxWidth: "100%", height: "auto" }}
+                  />
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
       </form>
