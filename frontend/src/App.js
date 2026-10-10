@@ -2,7 +2,7 @@ import React from "react";
 import AboutApp from "./AboutApp";
 import SendApp from "./SendApp";
 import ReceiveApp from "./ReceiveApp";
-import Nav from "./Nav";
+
 import "./App.css";
 
 function App() {
@@ -27,7 +27,6 @@ function App() {
             Encrypted, browser-to-browser file transfer.
           </span>
         </div>
-        <Nav />
       </div>
       {component}
     </div>
