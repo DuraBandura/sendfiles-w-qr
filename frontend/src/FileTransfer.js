@@ -4,6 +4,7 @@ import { NEW_ICE_CANDIDATE } from "./Constants.js";
 class Client {
   constructor(socket) {
     this.socket = socket;
+    this.pendingCandidates = [];
 
     const configuration = { iceServers: [{ urls: config.STUN_SERVER }] };
     this.connection = new RTCPeerConnection(configuration);
@@ -22,9 +23,24 @@ class Client {
   }
 
   addIceCandidate(candidate) {
+    // кандидат мог прийти раньше, чем установлено remote description
+    if (!this.connection.remoteDescription) {
+      this.pendingCandidates.push(candidate);
+      return;
+    }
     this.connection
       .addIceCandidate(candidate)
       .catch((e) => console.error("adding ice candidate", e));
+  }
+
+  async flushCandidates() {
+    const pending = this.pendingCandidates;
+    this.pendingCandidates = [];
+    for (const candidate of pending) {
+      await this.connection
+        .addIceCandidate(candidate)
+        .catch((e) => console.error("adding ice candidate", e));
+    }
   }
 
   setRecipientAddress(addr) {
@@ -45,10 +61,12 @@ class Client {
 export class Sender extends Client {
   chunkSize = 16 * 1024;
 
-  constructor(socket, contents) {
+  // onProgress(p) вызывается с числом от 0 до 1
+  constructor(socket, contents, onProgress) {
     super(socket);
 
     this.contents = contents;
+    this.onProgress = onProgress;
 
     this.channel = this.connection.createDataChannel("sendDataChannel");
     this.channel.binaryType = "arraybuffer";
@@ -84,19 +102,15 @@ export class Sender extends Client {
 
   async registerAnswer(desc) {
     await this.connection.setRemoteDescription(desc);
+    await this.flushCandidates();
   }
 
   sendData() {
     let offset = 0;
     const contentLen = this.contents.byteLength;
 
-    // https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Using_data_channels#understanding_message_size_limits
-    const bufferUpTo = 16 * 1024;
-    if (this.chunkSize > bufferUpTo) {
-      throw new Error(
-        `Chunk size ${this.chunkSize} cannot be greater than buffer size ${bufferUpTo}`,
-      );
-    }
+    // большой буфер, чтобы скорость не упиралась в задержку сети
+    const bufferUpTo = 1024 * 1024;
 
     const fillBuffer = () => {
       while (offset < contentLen && this.channel.bufferedAmount < bufferUpTo) {
@@ -108,9 +122,30 @@ export class Sender extends Client {
         offset += sliceContents.byteLength;
       }
     };
-    this.channel.bufferedAmountLowThreshold = bufferUpTo / 2;
+    this.channel.bufferedAmountLowThreshold = bufferUpTo / 4;
     this.channel.onbufferedamountlow = fillBuffer;
     fillBuffer();
+
+    // прогресс: отправлено минус то, что ещё стоит в буфере
+    const report = (p) => {
+      if (this.onProgress) {
+        this.onProgress(p);
+      }
+    };
+    report(0);
+    const timer = setInterval(() => {
+      if (this.channel.readyState !== "open") {
+        clearInterval(timer);
+        return;
+      }
+      const sent = Math.max(0, offset - this.channel.bufferedAmount);
+      if (offset >= contentLen && this.channel.bufferedAmount === 0) {
+        clearInterval(timer);
+        report(1);
+        return;
+      }
+      report(Math.min(0.99, sent / contentLen));
+    }, 200);
   }
 }
 
@@ -136,6 +171,7 @@ export class Receiver extends Client {
 
   async answer(desc) {
     await this.connection.setRemoteDescription(desc);
+    await this.flushCandidates();
     try {
       const answer = await this.connection.createAnswer();
       await this.connection.setLocalDescription(answer);
