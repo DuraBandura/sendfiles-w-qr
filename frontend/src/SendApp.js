@@ -28,6 +28,8 @@ const translations = {
     keepWindowOpen: "Вам нужно оставить это окно открытым до тех пор, пока файл не будет полностью скопирован в браузер получателя.",
     sendLink: "Отправьте следующую ссылку получателю вместе с вашим паролем:",
     qrCodeLabel: "QR-код для скачивания",
+    progress: "Передача",
+    done: "Готово",
     hideSettings: "Скрыть настройки",
     settings: "⚙️ Настройки",
     sizePixels: "Размер (пиксели):",
@@ -51,6 +53,8 @@ const translations = {
     keepWindowOpen: "You'll need to leave this window open until the file is completely copied to their browser.",
     sendLink: "Send the following link to the recipient, along with your password:",
     qrCodeLabel: "QR Code for download link",
+    progress: "Transfer",
+    done: "Done",
     hideSettings: "Hide settings",
     settings: "⚙️ Settings",
     sizePixels: "Size (pixels):",
@@ -73,6 +77,8 @@ function SendApp() {
   const [password, setPassword] = useState("");
   // список созданных ссылок: [{ link, name }]
   const [receiveLinks, setReceiveLinks] = useState([]);
+  // прогресс передачи по id трансфера: { [id]: число от 0 до 1 }
+  const [progress, setProgress] = useState({});
   const [passwordPlaceholder] = useState(
     Math.random() < 0.5 ? "hunter2" : "correct-horse-battery-staple",
   );
@@ -160,7 +166,10 @@ function SendApp() {
     // set up receiver link (добавляем в список, чтобы можно было отправить несколько файлов)
     const receiverLink = getReceiverLink(transferDetails.id);
     const fileName = fileDetails.name;
-    setReceiveLinks((prev) => [...prev, { link: receiverLink, name: fileName }]);
+    setReceiveLinks((prev) => [
+      ...prev,
+      { link: receiverLink, name: fileName, id: transferDetails.id },
+    ]);
 
     // open websocket to coordinate webrtc connection and transfer the file
     const socketUrl = new URL(config.COORD_API);
@@ -208,7 +217,9 @@ function SendApp() {
             senderSocket.onopen = resolve;
           });
 
-          const sender = new Sender(senderSocket, encrypted);
+          const sender = new Sender(senderSocket, encrypted, (p) =>
+            setProgress((prev) => ({ ...prev, [transferDetails.id]: p })),
+          );
           sender.setRecipientAddress(senderAddress);
           senders[senderAddress] = sender;
 
@@ -348,11 +359,26 @@ function SendApp() {
               </div>
             )}
 
-            {receiveLinks.map(({ link, name }) => (
+            {receiveLinks.map(({ link, name, id }) => (
               <div key={link} className="qr-section">
                 <div className="form-description">
                   <span className="bold">{name}</span>
                 </div>
+                {progress[id] !== undefined && (
+                  <div className="progress-wrapper">
+                    <div className="progress-label">
+                      {progress[id] >= 1
+                        ? t.done
+                        : `${t.progress}: ${Math.round(progress[id] * 100)}%`}
+                    </div>
+                    <div className="progress">
+                      <div
+                        className="progress-bar"
+                        style={{ width: `${Math.round(progress[id] * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="receive-link-container">
                   <div className="receive-link">
                     <a href={link} target="_blank" rel="noopener noreferrer">
