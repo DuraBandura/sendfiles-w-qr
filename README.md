@@ -1,151 +1,57 @@
-# sendfiles.dev
+# sendfiles-w-qr
 
-[sendfiles.dev](https://sendfiles.dev) позволяет передавать файлы с шифрованием напрямую между браузерами с использованием [WebRTC](https://webrtc.org).
+Передача файлов между браузерами напрямую (WebRTC) с шифрованием, **QR-кодом для ссылки** и русским интерфейсом.
 
-Этот форк добавляет возможность генерации QR-кодов для ссылок скачивания, поддержку русского языка и возможность развертывания на GitHub Pages.
+🔗 **Открыть:** https://durabandura.github.io/sendfiles-w-qr/
 
-## Особенности этой версии
+Это форк проекта [jchorl/sendfiles](https://github.com/jchorl/sendfiles). Если хотите почитать, как устроен оригинал и что лежит под капотом, вот ссылка: https://github.com/jchorl/sendfiles
 
-- **QR-коды**: После создания ссылки для скачивания автоматически генерируется QR-код, который можно отсканировать для быстрого доступа к файлу
-- **Настройка QR-кода**: Можно изменять размер QR-кода (от 64 до 2000 пикселей) и уровень коррекции ошибок
-- **Русский язык**: Интерфейс доступен на русском и английском языках с возможностью переключения
-- **GitHub Pages**: Фронтенд можно развернуть на GitHub Pages для бесплатного хостинга
+## Зачем это нужно
 
-## Быстрый старт с GitHub Pages
+В оригинале после выбора файла сайт выдаёт ссылку, и её нужно как-то донести до второго устройства: вставить в мессенджер, отправить себе в заметки и так далее. В форке рядом со ссылкой автоматически появляется **QR-код**: наводите камеру телефона, и ссылка уже открыта.
 
-1. Зайдите в настройки вашего репозитория на GitHub
-2. Перейдите в раздел **Pages** (в левой панели)
-3. В разделе **Source** выберите **GitHub Actions**
-4. Все изменения в ветке `master` автоматически запускают процесс сборки и деплоя
-5. Ваш сайт будет доступен по адресу: `https://<ваш-ник>.github.io/<имя-репозитория>`
+## Что добавлено в форке
 
-## Architecture
+- **QR-код** для ссылки на скачивание. Размер и уровень коррекции ошибок настраиваются.
+- **Русский и английский** интерфейс с переключателем.
+- **Несколько файлов за сессию:** кнопка создания ссылки не пропадает, у каждого файла своя ссылка и свой QR.
+- **Прогресс-бар передачи** на стороне отправителя.
+- **Ускоренная отправка:** увеличен буфер канала данных, а ICE-кандидаты не теряются при раннем получении.
+- **Деплой на GitHub Pages** через GitHub Actions.
 
-[sendfiles.dev](https://sendfiles.dev) has two components - a transfer metadata store and [WebRTC](https://webrtc.org) signalling/coordination. Each component has an [API Gateway](https://aws.amazon.com/api-gateway/), a [Lambda](https://aws.amazon.com/lambda/) function and a [DynamoDB](https://aws.amazon.com/dynamodb/) database.
+## Как пользоваться
 
-Transfers:
-  - `Transfers DynamoDB` - stores metadata (filename, size, keys) for transfers, but **not** the file contents
-  - `Transfers Lambda` - simple API wrapper around `Transfers DynamoDB`
-  - `Transfers API Gateway` - HTTP gateway sitting in front of `Transfers Lambda`
+1. Откройте сайт на устройстве, с которого отправляете файл.
+2. Выберите файл (до 100 МБ) и придумайте пароль.
+3. Нажмите **«Создать»**: файл зашифруется в вашем браузере, появятся ссылка и QR-код.
+4. Отсканируйте QR на втором устройстве (или откройте ссылку) и введите пароль. Пароль нужно передать получателю отдельно.
+5. Нажмите **Receive**. Файл скачается автоматически, когда придёт целиком.
 
-Coordination:
-  - `Sessions DynamoDB` - stores API Gateway websocket IDs of file owners so receivers can request files and coordinate WebRTC
-  - `Coord Lambda` - allows sender/receiver to communicate in order to set up [WebRTC](https://webrtc.org) connections
-  - `Coord API Gateway` - Websocket gateway sitting in front of `Coord Lambda`, keeping websockets open
+Окно отправителя нужно держать открытым, пока файл не передан. Ссылка действует один час.
 
-![architecture diagram](https://sendfiles.dev/architecture.png)
+## Важно знать
 
+- **На телефоне откроется оригинальный сайт, а не форк.** Получатель работает со страницей оригинала `sendfiles.dev`, поэтому там нет перевода на русский. Форк отвечает только за сторону отправителя.
+- **После нажатия Receive ничего не происходит, пока файл не дойдёт.** Ни на телефоне, ни на компьютере нет индикатора. Это поведение оригинала. Подождите: файл скачается сам. Прогресс можно посмотреть на отправителе.
+- **Вне локальной сети передача может идти долго.** Если устройства не в одной сети, соединение устанавливается дольше, а скорость ниже. Следите за прогрессом на стороне отправителя.
+- **С российскими IP-адресами возможны проблемы с получением файла.** Если можете, пользуйтесь локальной сетью: оба устройства в одной Wi-Fi.
 
-## Project Structure
-```
-backend/ - code for both Lambdas, written in Rust
-frontend/ - webapp, written in React (with QR code support and i18n)
-scripts/ - misc helper scripts for build/deploy
-terraform/ - config for all the infrastructure
-.github/workflows/ - GitHub Actions workflows for CI/CD
-```
+## Запуск локально
 
-
-## Deployment
-
-### Развертывание на GitHub Pages
-
-Автоматическое развертывание настроено через GitHub Actions. При каждом пуше в ветку `master`:
-1. Устанавливаются зависимости
-2. Собирается фронтенд
-3. Артефакты загружаются на GitHub Pages
-
-Для ручной публикации используйте команду:
-```shell
+```bash
 cd frontend
-npm run deploy
+npm install
+npm start
 ```
 
-### Оригинальное развертывание на AWS
+Откроется http://localhost:3000. Серверная часть (координация соединения и метаданные) используется от оригинала, поднимать её самому не нужно.
 
-The Lambdas, API Gateways, DynamoDBs, IAM permissions and frontend S3 bucket/CloudFront distribution are deployed with Terraform:
+## Деплой на GitHub Pages
 
-#### Terraform
+В настройках репозитория: **Settings → Pages → Source → GitHub Actions**. Дальше каждый пуш в ветку `master` собирает фронтенд и публикует его автоматически.
 
-```shell
-docker run -it --rm \
-    -v "$(pwd)/terraform":/work/terraform \
-    -w /work/terraform \
-    -v "$HOME/.aws:/root/.aws" \
-    -e AWS_PROFILE=sendfiles \
-    -e AWS_DEFAULT_REGION=us-west-2 \
-    --entrypoint sh \
-    hashicorp/terraform:1.9
-```
+## Благодарности
 
-#### Backend
+Спасибо автору оригинала, [jchorl](https://github.com/jchorl), за сам проект: этот форк появился благодаря ему.
 
-```shell
-docker run -it --rm \
-    -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc \
-    -e RUSTFLAGS="-C target-feature=+crt-static" \
-    -v "$(pwd)/backend":/src \
-    -w /src \
-    rust:1.82 \
-    bash
-
-apt-get -qq update && apt-get -qq install -y gcc-aarch64-linux-gnu
-rustup target add aarch64-unknown-linux-gnu
-cargo build --target=aarch64-unknown-linux-gnu --release
-```
-
-```shell
-./scripts/deploy-backend.sh
-```
-
-#### Frontend
-
-Frontend assets are deployed to an S3 bucket fronted by CloudFront:
-```shell
-./scripts/deploy-statics.sh
-```
-
-
-## Development
-
-Running a Rust Lambda function locally is brutally difficult, so test in prod.
-
-### Running Frontend
-```shell
-docker run -it --rm \
-    -u "$(id -u):$(id -g)" \
-    -v "$(pwd)/frontend":/usr/src/app \
-    -w /usr/src/app \
-    -p 3000:3000 \
-    node:23 \
-    npm run start
-```
-
-### Prettier
-```shell
-docker run -it --rm \
-    -u "$(id -u):$(id -g)" \
-    -v "$(pwd)/frontend":/usr/src/app \
-    -w /usr/src/app \
-    node:23 \
-    npx prettier@3.4.1 --write src
-```
-
-
-## Website Design
-
-Colors: https://coolors.co/e7e247-3d3b30-4d5061-5c80bc-e9edde
-
-Favicon: https://favicon.io/favicon-generator/
-  - Font: `Inconsolata`
-  - Font Size: 90px
-  - Font Colour: #E9EDDE
-  - Background Colour: #4D5061
-
-```shell
-$ mv ~/Downloads/favicon_io.zip .
-$ unzip favicon_io.zip
-$ mv favicon.ico frontend/public/favicon.ico
-$ mv android-chrome-192x192.png frontend/public/logo192.png
-$ mv android-chrome-512x512.png frontend/public/logo512.png
-```
+Это мой первый форк.
